@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-A股盯盘台 - Windows 桌面启动器
+股票盯盘 - Windows 桌面启动器
 优先使用 pywebview 打开原生桌面窗口(Edge WebView2 内核, Win10/11 自带)；
 若 pywebview 未安装或启动失败, 自动回退为系统默认浏览器打开。
 """
@@ -65,7 +65,7 @@ def main():
         try:
             import webview  # pywebview
             webview.create_window(
-                "A股盯盘台 · 自选盯盘 · 选股 · 资讯 · 回测",
+                "股票盯盘 · 自选盯盘 · 选股 · 资讯 · 回测",
                 URL,
                 width=1360, height=900,
                 min_size=(980, 640),
@@ -78,7 +78,7 @@ def main():
 
     # 回退：系统默认浏览器
     webbrowser.open(URL)
-    print(f"\nA股盯盘台已启动: {URL}", flush=True)
+    print(f"\n股票盯盘已启动: {URL}", flush=True)
     print("本窗口仅作为服务进程, 最小化即可, 关闭则应用退出。\n", flush=True)
     try:
         while True:

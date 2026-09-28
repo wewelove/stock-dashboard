@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-A股盯盘台 - 后端服务
+股票盯盘 - 后端服务
 数据源: 新浪财经(全市场列表/选股) + 腾讯财经(指数/分时/K线)
 仅供研究参考, 不构成投资建议
 """
@@ -11,7 +11,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -21,7 +21,19 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-CST = ZoneInfo("Asia/Shanghai")
+def _get_cst():
+    """获取上海时区。
+
+    Windows 自身不携带 IANA 时区数据库, zoneinfo 依赖 PyPI 的 tzdata 包;
+    若该包缺失(或打包后未被收集), 回退为固定 UTC+8 偏移, 保证服务仍能启动。
+    """
+    try:
+        return ZoneInfo("Asia/Shanghai")
+    except Exception:
+        return timezone(timedelta(hours=8), "CST")
+
+
+CST = _get_cst()
 BASE = Path(__file__).resolve().parent
 STATIC = BASE / "static"
 
@@ -1179,7 +1191,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="A股盯盘台", lifespan=lifespan)
+app = FastAPI(title="股票盯盘", lifespan=lifespan)
 app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 

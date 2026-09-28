@@ -2,3 +2,5 @@ fastapi>=0.110
 uvicorn>=0.29
 requests>=2.31
 pywebview>=5.0
+# Windows 无系统 tzdata 数据库, 需由此包提供 (否则 ZoneInfo("Asia/Shanghai") 报错)
+tzdata>=2024.1

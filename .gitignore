@@ -1,0 +1,13 @@
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+.venv/*
+.vfox/*
+__pycache__/*
+
+build/*
+dist/*
+股票盯盘.spec

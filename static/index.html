@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>A股盯盘台</title>
+<title>股票盯盘</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230e1116'/%3E%3Crect x='14' y='24' width='10' height='22' fill='%23f0524a'/%3E%3Crect x='18' y='12' width='2' height='42' fill='%23f0524a'/%3E%3Crect x='36' y='18' width='10' height='24' fill='%232fbf71'/%3E%3Crect x='40' y='10' width='2' height='44' fill='%232fbf71'/%3E%3C/svg%3E">
 <script src="/static/echarts.min.js"></script>
 <style>
@@ -11,6 +11,11 @@
   --bg:#0e1116; --panel:#161b22; --panel2:#1c232e; --border:#26303f;
   --text:#d9e0ea; --muted:#8b95a5; --accent:#4a9eff;
   --up:#f0524a; --down:#2fbf71; --flat:#8b95a5;
+  --sb-w:10px;                       /* 滚动条宽度 */
+  --sb-thumb:#33405a;                /* 滑块常态 */
+  --sb-thumb-hover:#4a5f85;          /* 滑块悬停 */
+  --sb-thumb-active:var(--accent);   /* 滑块拖动中 */
+  --sb-track:transparent;            /* 轨道(默认透明, 融入面板) */
 }
 *{box-sizing:border-box; margin:0; padding:0}
 body{background:var(--bg); color:var(--text); font:14px/1.5 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif; padding-bottom:40px}
@@ -196,7 +201,41 @@ td .code{color:var(--muted); font-size:11px; display:block}
 /* toast & footer */
 #toast{position:fixed; top:18px; left:50%; transform:translateX(-50%); background:#2a3444; color:#fff; border-radius:8px; padding:8px 18px; z-index:99; display:none; font-size:13px}
 footer{color:var(--muted); font-size:11px; text-align:center; margin-top:24px; line-height:1.8}
+
+/* ===== 滚动条美化 (WebView2/Chromium + Firefox 双实现) ===== */
+/* WebKit 内核: Chromium/Edge WebView2, 以及 Safari */
+::-webkit-scrollbar{width:var(--sb-w); height:var(--sb-w)}
+::-webkit-scrollbar-track{background:var(--sb-track); border-radius:8px}
+::-webkit-scrollbar-thumb{
+  background:var(--sb-thumb); border-radius:8px;
+  border:2px solid transparent; background-clip:content-box;   /* 内缩留白, 滑块更纤细 */
+  transition:background .18s
+}
+::-webkit-scrollbar-thumb:hover{background:var(--sb-thumb-hover); background-clip:content-box}
+::-webkit-scrollbar-thumb:active{background:var(--sb-thumb-active); background-clip:content-box}
+::-webkit-scrollbar-corner{background:transparent}       /* 横竖滚动条交角 */
+::-webkit-scrollbar-button{display:none; width:0; height:0}  /* 去掉两端箭头按钮 */
+
+/* 表格横向滚动容器: 滑块矮一点, 视觉更轻 */
+.tscroll::-webkit-scrollbar{height:8px}
+.tscroll::-webkit-scrollbar-thumb{background:var(--sb-thumb); border:2px solid transparent; background-clip:content-box}
+
+/* Firefox 不支持 ::-webkit-scrollbar, 用标准属性 */
+@supports (scrollbar-width:thin){
+  *{scrollbar-width:thin; scrollbar-color:var(--sb-thumb) var(--sb-track)}
+}
+
+/* 支持标准 scrollbar-color 的浏览器(新版 Chrome/Edge 140+)会同时命中两套规则,
+   以标准属性为准, 避免 WebKit 伪元素与标准属性叠加出双滚动条 */
+@supports (scrollbar-color:auto){
+  ::-webkit-scrollbar{width:auto; height:auto}
+  ::-webkit-scrollbar-thumb{background:transparent; border:none}
+  ::-webkit-scrollbar-track{background:transparent}
+  *{scrollbar-width:thin; scrollbar-color:var(--sb-thumb) var(--sb-track)}
+}
+
 @media(max-width:860px){
+  :root{--sb-w:8px}
   .idxrow{grid-template-columns:repeat(2,1fr)}
   .idxc:nth-child(5){display:none}
   .mgrid{grid-template-columns:repeat(3,1fr)}
@@ -207,7 +246,7 @@ footer{color:var(--muted); font-size:11px; text-align:center; margin-top:24px; l
 <div class="wrap">
 
   <div class="topbar">
-    <div class="brand">A股盯盘台<small>自选 · 榜单 · 选股 · 资讯 · 回测</small></div>
+    <div class="brand">股票盯盘<small>自选 · 榜单 · 选股 · 资讯 · 回测</small></div>
     <span class="badge" id="phaseBadge">加载中</span>
     <div class="updated" id="updated">--</div>
     <div class="bellwrap" id="bellWrap">
@@ -242,7 +281,7 @@ footer{color:var(--muted); font-size:11px; text-align:center; margin-top:24px; l
     <button data-tab="watch" class="on">自选盯盘</button>
     <button data-tab="rank">市场榜单</button>
     <button data-tab="scr">条件选股</button>
-    <button data-tab="news">资讯·政策</button>
+    <button data-tab="news">资讯政策</button>
     <button data-tab="bt">策略回测</button>
   </div>
 
@@ -272,7 +311,7 @@ footer{color:var(--muted); font-size:11px; text-align:center; margin-top:24px; l
     </div>
     <div id="rankLocal">
       <div class="tscroll"><table id="rankTable">
-        <thead><tr><th class="l">#</th><th class="l">股票</th><th>现价</th><th>涨跌幅</th><th>成交额</th><th>换手率</th><th>总市值</th><th>市盈率</th></tr></thead>
+        <thead><tr><th class="l">#</th><th class="l">股票</th><th>现价</th><th>涨跌幅</th><th>涨跌额</th><th>今开</th><th>最高</th><th>最低</th><th>昨收</th><th>换手率</th><th>成交额</th><th>总市值</th><th>市盈率</th></tr></thead>
         <tbody></tbody>
       </table></div>
     </div>
