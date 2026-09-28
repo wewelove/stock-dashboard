@@ -31,6 +31,7 @@
 | 双击 bat 闪退 | 右键"以管理员身份运行"；或先开 cmd 再拖入 bat 回车，看报错信息 |
 | 报 `Could not find a version that satisfies the requirement fastapi` | 通常是本机 TLS 证书吊销检查（CRL/OCSP）被墙或内网拦截，导致清华源握手失败（与"包不存在/版本太旧"无关）。脚本已内置三源自动回退（清华 → 阿里云 → 官方），一般可自动解决。手动方案见下方"依赖安装失败怎么办" |
 | 窗口空白 | 等 3~5 秒服务启动；仍空白则看控制台是否有红色报错 |
+| 自选股会不会丢 | 不会。自选股由后端保存成 JSON 文件 `watchlist.json`：源码运行时在项目目录，打包成 exe 后与 exe 同目录（该目录不可写时自动回退到 `%LOCALAPPDATA%\StockDashboard\`）。添加/移除/清空都会即时写入，每次打开自动读取。想手动改也行，文件内容形如 `{"codes": ["600519","300750"]}` |
 | 杀毒软件拦截 exe | PyInstaller 单文件常见误报，添加信任即可 |
 | 数据不显示 | 检查能否访问新浪/腾讯财经（公司内网可能拦行情接口） |
 | 报 `ZoneInfoNotFoundError: 'No time zone found with key Asia/Shanghai'` / `No module named 'tzdata'` | Windows 不自带 IANA 时区库，Python 的 `zoneinfo` 需要 PyPI 的 `tzdata` 包。已加入 `requirements.txt`，重新双击 `安装并启动.bat` 即可；程序也已内置 UTC+8 兜底，缺包也能启动 |
@@ -43,6 +44,7 @@ a-stock-dashboard/
 ├── desktop.py          # 桌面启动器（窗口 + 内置服务）
 ├── app.py              # 后端服务（FastAPI）
 ├── static/             # 前端页面
+├── watchlist.json      # 自选股数据（自动生成，可删除即恢复为空）
 ├── requirements.txt    # 依赖清单
 ├── 安装并启动.bat       # ← Windows 双击运行
 └── 打包成EXE.bat        # ← Windows 双击打包

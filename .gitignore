@@ -11,3 +11,7 @@ __pycache__/*
 build/*
 dist/*
 股票盯盘.spec
+
+# 用户数据(自选股)
+watchlist.json
+watchlist.json.tmp

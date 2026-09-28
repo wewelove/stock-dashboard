@@ -28,7 +28,33 @@ def free_port() -> int:
     return port
 
 
-PORT = free_port()
+def is_port_free(port: int) -> bool:
+    s = socket.socket()
+    try:
+        s.bind(("127.0.0.1", port))
+        return True
+    except OSError:
+        return False
+    finally:
+        s.close()
+
+
+# 优先使用固定端口: 每次启动访问地址一致(方便收藏, 也避免防火墙反复提示);
+# 被占用时按 8765 → 8766 → 8767 回退, 都占用才随机。自选股数据不依赖端口, 存在 watchlist.json。
+PREFERRED_PORTS = (8765, 8766, 8767)
+
+
+def pick_port() -> int:
+    env = os.environ.get("PORT", "").strip()
+    if env.isdigit() and 1 <= int(env) <= 65535:
+        return int(env)
+    for p in PREFERRED_PORTS:
+        if is_port_free(p):
+            return p
+    return free_port()  # 首选端口都被占用时才随机(此时本地自选会另存一份)
+
+
+PORT = pick_port()
 URL = f"http://127.0.0.1:{PORT}"
 _server_ready = threading.Event()
 

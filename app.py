@@ -6,7 +6,9 @@
 """
 import json
 import math
+import os
 import re
+import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -16,7 +18,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import requests
-from fastapi import FastAPI, Query
+from fastapi import Body, FastAPI, Query
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -1182,6 +1184,77 @@ def run_backtest(bars, strategy, fast, slow, n1, n2, rsi_low, rsi_high):
     }
 
 
+# ---------------- 自选股(JSON 文件持久化) ----------------
+
+def _primary_watch_file() -> Path:
+    """自选股文件位置: 打包成 EXE 后放 exe 同级目录(便于备份/查看), 源码运行放项目目录"""
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent / "watchlist.json"
+    return BASE / "watchlist.json"
+
+
+def _fallback_watch_file() -> Path:
+    """首选目录不可写时(例如 exe 放在 Program Files)回退到用户目录"""
+    root = Path(os.environ.get("LOCALAPPDATA") or Path.home())
+    return root / "StockDashboard" / "watchlist.json"
+
+
+WATCH_FILE = _primary_watch_file()
+WATCH_LOCK = threading.Lock()
+CODE_RE = re.compile(r"^\d{6}$")
+
+
+def clean_codes(value) -> list:
+    """清洗代码列表: 只保留 6 位数字代码, 去重并保持原顺序"""
+    if isinstance(value, dict):
+        value = value.get("codes")
+    if not isinstance(value, list):
+        return []
+    out, seen = [], set()
+    for x in value:
+        c = str(x).strip().upper()
+        if CODE_RE.match(c) and c not in seen:
+            seen.add(c)
+            out.append(c)
+    return out
+
+
+def read_watchlist() -> dict:
+    """读取自选股文件, 返回 {"codes": [...], "exists": 文件是否存在}"""
+    with WATCH_LOCK:
+        try:
+            raw = WATCH_FILE.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            return {"codes": [], "exists": False}
+        except OSError:
+            return {"codes": [], "exists": True}
+    try:
+        return {"codes": clean_codes(json.loads(raw)), "exists": True}
+    except (ValueError, TypeError):
+        return {"codes": [], "exists": True}      # 文件损坏: 当作空列表, 不阻塞页面
+
+
+def write_watchlist(codes) -> list:
+    """原子写入自选股文件(先写临时文件再替换, 避免写一半损坏), 返回保存后的代码列表"""
+    global WATCH_FILE
+    codes = clean_codes(codes)
+    payload = {"codes": codes, "count": len(codes),
+               "updated": now_cst().strftime("%Y-%m-%d %H:%M:%S")}
+    text = json.dumps(payload, ensure_ascii=False, indent=2)
+    with WATCH_LOCK:
+        for target in (WATCH_FILE, _fallback_watch_file()):
+            try:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                tmp = target.with_name(target.name + ".tmp")
+                tmp.write_text(text, encoding="utf-8")
+                tmp.replace(target)
+                WATCH_FILE = target              # 记住实际可写的位置
+                return codes
+            except OSError:
+                continue
+    raise OSError(f"自选股文件写入失败: {WATCH_FILE}")
+
+
 # ---------------- FastAPI ----------------
 
 @asynccontextmanager
@@ -1198,6 +1271,26 @@ app.add_middleware(GZipMiddleware, minimum_size=1024)
 @app.get("/")
 def index():
     return FileResponse(STATIC / "index.html")
+
+
+@app.get("/api/watchlist")
+def api_watchlist_get():
+    """读取自选股列表(保存在 watchlist.json)"""
+    d = read_watchlist()
+    return {"codes": d["codes"], "exists": d["exists"], "file": str(WATCH_FILE)}
+
+
+@app.post("/api/watchlist")
+def api_watchlist_save(payload: dict | None = Body(default=None)):
+    """覆盖保存自选股列表, 请求体 {"codes": ["600519", ...]}"""
+    codes = (payload or {}).get("codes", [])
+    if not isinstance(codes, list):
+        return JSONResponse({"ok": False, "error": "codes 必须是字符串数组"}, status_code=400)
+    try:
+        saved = write_watchlist(codes)
+    except OSError as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+    return {"ok": True, "codes": saved, "count": len(saved), "file": str(WATCH_FILE)}
 
 
 @app.get("/api/health")
