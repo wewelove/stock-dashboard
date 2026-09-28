@@ -23,6 +23,8 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+import finance_toolkit as ft
+
 def _get_cst():
     """获取上海时区。
 
@@ -127,10 +129,10 @@ def get_cache(store, key):
 
 # ---------------- 新浪全市场 ----------------
 
-def fetch_sina_page(page: int, num: int = 100):
+def fetch_sina_page(page: int, num: int = 100, node: str = "hs_a"):
     r = session.get(
         SINA_LIST_URL,
-        params={"page": page, "num": num, "sort": "amount", "asc": 0, "node": "hs_a"},
+        params={"page": page, "num": num, "sort": "amount", "asc": 0, "node": node},
         timeout=10,
     )
     r.raise_for_status()
@@ -1464,6 +1466,318 @@ def api_backtest(code: str, strategy: str = "ma_cross", fast: int = 5, slow: int
         return res
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=502)
+
+
+# ---------------- finance_toolkit: 一键回测 / 策略引擎 / 日报 ----------------
+
+def ft_bars(code: str, lmt: int = 500) -> dict:
+    """取日K(复用 /api/kline 同一缓存)并转成 finance_toolkit 所需的列式 dict"""
+    lmt = max(120, min(int(lmt or 500), 800))
+    is_index = code.startswith(("sh000", "sz399"))
+    fq = "" if is_index else "qfq"
+    ttl = 60 if market_phase()[1] else 1200
+    cache = get_cache(kline_cache, (code, "day", lmt))
+    data, ts = cache.get()
+    if data is None or time.time() - ts > ttl:
+        bars_raw, _ = fetch_kline_with_fallback(code, "day", lmt, fq)
+        parsed = []
+        for b in bars_raw:
+            if len(b) >= 6:
+                parsed.append({"date": str(b[0])[:10], "open": _f(b[1]), "close": _f(b[2]),
+                               "high": _f(b[3]), "low": _f(b[4]), "volume": _f(b[5])})
+        data = {"bars": parsed}
+        cache.set(data)
+    out = {"date": [], "open": [], "high": [], "low": [], "close": [], "volume": []}
+    for b in data["bars"]:
+        if None in (b["open"], b["close"], b["high"], b["low"]):
+            continue
+        out["date"].append(b["date"])
+        out["open"].append(b["open"])
+        out["high"].append(b["high"])
+        out["low"].append(b["low"])
+        out["close"].append(b["close"])
+        out["volume"].append(b["volume"] or 0.0)
+    return out
+
+
+def ft_stock_name(code6: str) -> str:
+    data, _ = all_cache.get()
+    if data and code6 in data["by_code"]:
+        return data["by_code"][code6].get("n") or ""
+    return ""
+
+
+@app.get("/api/ft_strategies")
+def api_ft_strategies():
+    """策略库元数据(10个策略: key/name/group/desc/params)"""
+    return {"strategies": ft.STRATEGIES, "note": ft.STRATEGY_NOTE}
+
+
+@app.get("/api/ft_backtest")
+def api_ft_backtest(code: str, strategy: str = "ma5_20", lmt: int = 500):
+    """一键回测: 单策略完整结果(权益曲线/交易明细/绩效指标)"""
+    strategy = strategy if strategy in ft.STRATEGY_MAP else "ma5_20"
+    try:
+        code = norm_code(code)
+        d = ft_bars(code, lmt)
+        if len(d["close"]) < 80:
+            return JSONResponse({"error": f"K线数据不足({len(d['close'])}根)"}, status_code=400)
+        res = ft.run_one(d, strategy)
+        res["code"] = code
+        res["stock_name"] = ft_stock_name(code[2:])
+        res["bars_total"] = len(d["close"])
+        res["note"] = ft.STRATEGY_NOTE
+        return res
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
+
+
+@app.get("/api/ft_compare")
+def api_ft_compare(code: str, lmt: int = 500):
+    """一键回测: 10策略横评(按夏普排序, 附最优与中位数)"""
+    try:
+        code = norm_code(code)
+        d = ft_bars(code, lmt)
+        if len(d["close"]) < 80:
+            return JSONResponse({"error": f"K线数据不足({len(d['close'])}根)"}, status_code=400)
+        res = ft.run_all(d)
+        res["code"] = code
+        res["stock_name"] = ft_stock_name(code[2:])
+        res["bars_total"] = len(d["close"])
+        res["note"] = ft.STRATEGY_NOTE
+        return res
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
+
+
+@app.get("/api/ft_scan")
+def api_ft_scan(code: str, strategy: str = "ma5_20", lmt: int = 500):
+    """一键回测: 参数网格搜索(敏感性分析)"""
+    strategy = strategy if strategy in ft.STRATEGY_MAP else "ma5_20"
+    try:
+        code = norm_code(code)
+        d = ft_bars(code, lmt)
+        if len(d["close"]) < 80:
+            return JSONResponse({"error": f"K线数据不足({len(d['close'])}根)"}, status_code=400)
+        res = ft.scan(d, strategy)
+        res["code"] = code
+        res["stock_name"] = ft_stock_name(code[2:])
+        res["note"] = ft.STRATEGY_NOTE
+        return res
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
+
+
+@app.get("/api/ft_engine")
+def api_ft_engine(code: str, lmt: int = 300):
+    """策略引擎: 实时多指标共振分析 + 60分买入建议 + 融合策略持仓状态"""
+    try:
+        code = norm_code(code)
+        d = ft_bars(code, lmt)
+        ta = ft.live_analysis(d)
+        if "error" in ta:
+            return JSONResponse({"error": ta["error"]}, status_code=400)
+        return {"code": code, "stock_name": ft_stock_name(code[2:]),
+                "as_of": d["date"][-1] if d["date"] else "",
+                "analysis": ta, "suggest": ft.buy_suggest(ta),
+                "fusion": ft.fusion_status(d)}
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
+
+
+# ---------------- finance_toolkit: 日报 ----------------
+
+ft_report_cache = Cache()
+FT_REPORT_TTL = 300
+
+
+def _limit_pct(c6: str) -> float:
+    """涨跌停幅度(近似阈值): 创业板/科创板20%, 北交所30%, 主板10% (ST用容差处理)"""
+    if c6.startswith(("30", "68")):
+        return 19.5
+    if c6[:1] in ("4", "8"):
+        return 29.5
+    return 9.7
+
+
+def _ft_hot_stocks(rows: list, n: int = 10):
+    """热门个股: 成交额TOP, 排除ST/退市"""
+    cand = [r for r in rows
+            if r.get("p") is not None and r.get("a")
+            and "ST" not in (r.get("n") or "") and "退" not in (r.get("n") or "")]
+    cand = sorted(cand, key=lambda r: r["a"], reverse=True)[:n]
+    return [{"code": r["c"], "name": r.get("n") or "", "price": r["p"],
+             "change_pct": r.get("chg") or 0, "amount": r.get("a"), "turnover": r.get("tr")}
+            for r in cand]
+
+
+def _ft_hot_concepts(snap, sig) -> list:
+    """热点行业: 资讯信号加权TOP行业 + 成分股当日均涨幅/涨跌家数"""
+    hy = fetch_industry_list()
+    inds = (sig.get("industries") or [])[:6]
+
+    def row(it):
+        node = hy.get(it["name"])
+        codes = fetch_node_members(node) if node else []
+        base = {"name": it["name"], "chg": None, "up": 0, "down": 0,
+                "score": it.get("score", 0), "count": it.get("count", 0)}
+        if not codes or snap is None:
+            return base
+        gs = [snap["by_code"][c]["chg"] for c in codes
+              if c in snap["by_code"] and snap["by_code"][c].get("chg") is not None]
+        if gs:
+            base["chg"] = round(sum(gs) / len(gs), 2)
+            base["up"] = sum(1 for g in gs if g > 0)
+            base["down"] = sum(1 for g in gs if g < 0)
+        return base
+
+    try:
+        with ThreadPoolExecutor(max_workers=6) as ex:
+            out = list(ex.map(row, inds))
+    except Exception:
+        out = []
+    out.sort(key=lambda x: (x["chg"] is not None, x["chg"] or -999), reverse=True)
+    return out
+
+
+def _ft_watch_scores(snap, watch: list) -> list:
+    """自选股 60 分评分(monitor_v3 口径), 并行取K线"""
+    if not watch or snap is None:
+        return []
+
+    def one(c6):
+        r = snap["by_code"].get(c6)
+        if not r or r.get("p") is None:
+            return None
+        try:
+            d = ft_bars(norm_code(c6), 120)
+        except Exception:
+            return None
+        if len(d["close"]) < 30:
+            return None
+        s = ft.score_stock(d, r["p"], r.get("chg") or 0, c6, r.get("n") or "")
+        return None if "error" in s else s
+
+    with ThreadPoolExecutor(max_workers=5) as ex:
+        return [x for x in ex.map(one, watch) if x]
+
+
+def _ft_tech_signals(hot: list) -> list:
+    """热门个股技术信号(原包 daily_report 口径: MACD多空 + RSI + 布林触轨)"""
+    def one(r):
+        try:
+            d = ft_bars(norm_code(r["code"]), 150)
+        except Exception:
+            return None
+        if len(d["close"]) < 30:
+            return None
+        parts = []
+        dif, dea, _ = ft.macd(d["close"])
+        if dif[-1] is not None and dea[-1] is not None:
+            parts.append("MACD=" + ("📈多头" if dif[-1] > dea[-1] else "📉空头"))
+        rv = ft._last(ft.rsi(d["close"], 14))
+        if rv is not None:
+            parts.append(f"RSI={rv:.0f}")
+            if rv < 30:
+                parts.append("⚡超卖")
+            elif rv > 70:
+                parts.append("⚠️超买")
+        mid, up, low = ft.bollinger(d["close"], 20, 2)
+        mv, uv, lv = ft._last(mid), ft._last(up), ft._last(low)
+        if None not in (mv, uv, lv):
+            px = d["close"][-1]
+            if px <= lv:
+                parts.append("📉触下轨")
+            elif px >= uv:
+                parts.append("📈触上轨")
+        return {"code": r["code"], "name": r["name"], "price": r["price"],
+                "signals": " | ".join(parts)}
+
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        return [x for x in ex.map(one, hot) if x]
+
+
+def build_ft_report() -> dict:
+    """日报: 大盘指数 + 涨跌分布 + 热点行业 + 热门个股 + 自选评分 + 技术信号 + 融合策略"""
+    report = {"report_time": now_cst().strftime("%Y-%m-%d %H:%M"), "note": ft.STRATEGY_NOTE}
+    # 1) 大盘指数
+    try:
+        data, ts = summary_cache.get()
+        if data is None or time.time() - ts > 60:
+            data = fetch_summary()
+            summary_cache.set(data)
+        report["market_overview"] = [
+            {"name": x["name"], "latest": x.get("price"), "change_pct": x.get("chg")}
+            for x in data if x.get("price") is not None]
+    except Exception:
+        report["market_overview"] = []
+    # 2) 涨跌分布(全市场快照; 服务刚启动时主动构建一次)
+    snap, _ = all_cache.get()
+    if snap is None:
+        try:
+            snap = build_all_snapshot()
+            if snap["count"] > 0:
+                all_cache.set(snap)
+        except Exception:
+            snap = None
+    rows = snap["rows"] if snap else []
+    up = down = flat = lu = ld = 0
+    for r in rows:
+        g = r.get("chg")
+        if g is None:
+            continue
+        if g > 0:
+            up += 1
+        elif g < 0:
+            down += 1
+        else:
+            flat += 1
+        lim = _limit_pct(r["c"])
+        if g >= lim:
+            lu += 1
+        elif g <= -lim:
+            ld += 1
+    report["breadth"] = {"up": up, "down": down, "flat": flat,
+                         "limit_up": lu, "limit_dn": ld, "total": len(rows)}
+    # 3) 热门个股(成交额TOP) + 技术信号
+    hot = _ft_hot_stocks(rows, 10)
+    report["hot_stocks"] = hot
+    report["strategy_signals"] = _ft_tech_signals(hot[:8])
+    # 4) 热点行业(资讯信号口径 + 成分均涨幅)
+    try:
+        sig = get_news_signal()
+        report["hot_concepts"] = _ft_hot_concepts(snap, sig) if sig.get("ready") else []
+    except Exception:
+        report["hot_concepts"] = []
+    # 5) 自选股 60 分评分
+    watch = read_watchlist().get("codes") or []
+    report["watch_scores"] = _ft_watch_scores(snap, watch)
+    # 6) 融合策略状态(自选第一只, 否则热门第一只)
+    report["fusion"] = []
+    focus = watch[0] if watch else (hot[0]["code"] if hot else None)
+    if focus:
+        try:
+            report["fusion"] = ft.fusion_status(ft_bars(norm_code(focus), 400))
+            report["fusion_code"] = focus
+        except Exception:
+            report["fusion"] = []
+    return report
+
+
+@app.get("/api/ft_report")
+def api_ft_report(force: int = 0):
+    """日报生成(结果缓存5分钟, force=1 强制刷新)"""
+    data, ts = ft_report_cache.get()
+    if force or data is None or time.time() - ts > FT_REPORT_TTL:
+        try:
+            data = build_ft_report()
+            ft_report_cache.set(data)
+        except Exception as e:
+            if data is None:
+                return JSONResponse({"error": str(e)}, status_code=502)
+    out = dict(data)
+    out["markdown"] = ft.render_report_md(data)
+    return out
 
 
 app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")

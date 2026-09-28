@@ -1039,6 +1039,88 @@
       height: 100%
     }
 
+    /* 量化工具 finance_toolkit */
+    .ftsub {
+      display: none
+    }
+
+    .ftsub.on {
+      display: block
+    }
+
+    #ftbChart {
+      height: 340px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 12px
+    }
+
+    .ftgrid2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px
+    }
+
+    .ftc {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 12px
+    }
+
+    .ftct {
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 8px
+    }
+
+    .ftbox {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      font-size: 13px;
+      line-height: 1.75
+    }
+
+    .ftlist .frow {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 0;
+      border-bottom: 1px dashed var(--border);
+      font-size: 13px
+    }
+
+    .ftlist .frow:last-child {
+      border-bottom: none
+    }
+
+    .ftlist .frow .lbl {
+      color: var(--muted);
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap
+    }
+
+    .ftlist .frow .val {
+      font-weight: 600;
+      white-space: nowrap
+    }
+
+    .ftlist .frow .sub {
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap
+    }
+
     .paramnote {
       color: var(--muted);
       font-size: 12px
@@ -1317,7 +1399,7 @@
   <div class="wrap">
 
     <div class="topbar">
-      <div class="brand">股票盯盘<small>自选 · 榜单 · 选股 · 资讯 · 回测</small></div>
+      <div class="brand">股票盯盘<small>自选 · 榜单 · 选股 · 资讯 · 回测 · 量化</small></div>
       <span class="badge" id="phaseBadge">加载中</span>
       <div class="updated" id="updated">--</div>
       <div class="bellwrap" id="bellWrap">
@@ -1355,6 +1437,7 @@
       <button data-tab="scr">条件选股</button>
       <button data-tab="news">资讯政策</button>
       <button data-tab="bt">策略回测</button>
+      <button data-tab="ft">量化工具</button>
     </div>
 
     <!-- 自选 -->
@@ -1572,6 +1655,121 @@
       <div class="empty" id="btEmpty">输入代码与策略参数，点击"开始回测"</div>
     </div>
 
+    <!-- 量化工具 finance_toolkit: 一键回测 / 策略引擎 / 日报 -->
+    <div class="tabpane" id="pane-ft">
+      <div class="subtabs" id="ftTabs">
+        <button data-f="backtest" class="on">一键回测</button>
+        <button data-f="engine">策略引擎</button>
+        <button data-f="report">日报生成</button>
+      </div>
+
+      <!-- 一键回测 -->
+      <div class="ftsub on" id="ftsub-backtest">
+        <div class="scrform">
+          <div class="fgrid btgrid">
+            <div class="fitem"><label>股票代码</label><input id="ftb_code" value="000009" placeholder="如 000009"></div>
+            <div class="fitem"><label>策略(原包10种)</label><select id="ftb_strategy"></select></div>
+            <div class="fitem"><label>K线条数(约2条=1年)</label><input id="ftb_lmt" type="number" value="500" min="120"
+                max="800"></div>
+          </div>
+          <div class="fbtns">
+            <button class="go" id="ftbGo">单策略回测</button>
+            <button class="rst" id="ftbCompare">10策略横评</button>
+            <button class="rst" id="ftbScan">参数网格扫描</button>
+            <span class="paramnote" id="ftbNote"></span>
+          </div>
+        </div>
+        <div class="mcards" id="ftbCards" style="display:none"></div>
+        <div id="ftbChart" style="display:none"></div>
+        <div class="tscroll" id="ftbTableWrap" style="display:none">
+          <table id="ftbTable">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="empty" id="ftbEmpty">选择策略点击「单策略回测」，或用「10策略横评」一次跑完 10 个策略</div>
+      </div>
+
+      <!-- 策略引擎 -->
+      <div class="ftsub" id="ftsub-engine">
+        <div class="scrform">
+          <div class="fgrid btgrid">
+            <div class="fitem"><label>股票代码</label><input id="fte_code" value="000009" placeholder="如 000009"></div>
+            <div class="fitem"><label>K线条数</label><input id="fte_lmt" type="number" value="300" min="120" max="800">
+            </div>
+          </div>
+          <div class="fbtns">
+            <button class="go" id="fteGo">多指标共振分析</button>
+            <span class="paramnote">布林带 + RSI + KDJ + MACD 融合 · 60分买入建议 · 融合策略持仓状态</span>
+          </div>
+        </div>
+        <div id="fteResult" style="display:none">
+          <div class="mcards" id="fteCards"></div>
+          <div class="ftbox" id="fteSug"></div>
+          <div class="ftbox" id="fteSignals"></div>
+          <div class="ftc">
+            <div class="ftct">⚙️ 融合策略当前状态(同一只票)</div>
+            <div class="tscroll" id="ftFusionWrap">
+              <table id="ftFusion">
+                <thead>
+                  <tr>
+                    <th class="l">融合策略</th>
+                    <th>状态</th>
+                    <th class="l">最近动作</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="empty" id="fteEmpty">输入代码点击「多指标共振分析」，得到指标共振、买入建议与融合策略状态</div>
+      </div>
+
+      <!-- 日报生成 -->
+      <div class="ftsub" id="ftsub-report">
+        <div class="fbtns" style="margin-bottom:12px">
+          <button class="go" id="ftrGo">生成今日日报</button>
+          <button class="rst" id="ftrCopy">复制Markdown</button>
+          <span class="paramnote" id="ftrTime"></span>
+        </div>
+        <div id="ftrBody" style="display:none">
+          <div class="mcards" id="ftrIdx"></div>
+          <div class="ftgrid2">
+            <div class="ftc">
+              <div class="ftct">📊 涨跌分布</div>
+              <div class="ftlist" id="ftrBreadth"></div>
+            </div>
+            <div class="ftc">
+              <div class="ftct">🏷️ 热点行业(成分均涨幅)</div>
+              <div class="ftlist" id="ftrConcepts"></div>
+            </div>
+          </div>
+          <div class="ftgrid2">
+            <div class="ftc">
+              <div class="ftct">🔥 热门个股 Top10(成交额)</div>
+              <div class="ftlist" id="ftrHot"></div>
+            </div>
+            <div class="ftc">
+              <div class="ftct">🎯 自选股 60 分评分</div>
+              <div class="ftlist" id="ftrWatch"></div>
+            </div>
+          </div>
+          <div class="ftgrid2">
+            <div class="ftc">
+              <div class="ftct">🔍 技术信号(MACD/RSI/布林)</div>
+              <div class="ftlist" id="ftrSignals"></div>
+            </div>
+            <div class="ftc">
+              <div class="ftct">⚙️ 融合策略状态</div>
+              <div class="ftlist" id="ftrFusion"></div>
+            </div>
+          </div>
+        </div>
+        <div class="empty" id="ftrEmpty">点击「生成今日日报」(首次约需10~30秒，结果缓存5分钟)</div>
+      </div>
+    </div>
+
     <!-- 选股 -->
     <div class="tabpane" id="pane-scr">
       <div class="newspanel">
@@ -1779,6 +1977,10 @@
       if (tab === 'scr') { if (!SIG) refreshNews(false); if (!scrHasResult) applyScreener(); }
       if (tab === 'news') { if (!NC) loadNewsArchive(false); else renderNCChart(); }
       if (tab === 'bt') { setTimeout(() => { btChartInst && btChartInst.resize(); }, 50); }
+      if (tab === 'ft') {
+        ftEnsureStrategies();
+        setTimeout(() => { ftbChartInst && ftbChartInst.resize(); }, 50);
+      }
     });
 
     /* ---------- 资讯/政策信号 ---------- */
@@ -2591,6 +2793,344 @@
         || '<tr><td colspan="6" class="empty">该区间策略未产生完整交易</td></tr>';
       toast(`回测完成：${d.strategy_name} · 收益 ${(d.total_ret > 0 ? '+' : '') + d.total_ret}%`);
     }
+
+    /* ---------- 量化工具 finance_toolkit ---------- */
+    let ftbChartInst = null, ftStrategies = null, ftReportData = null;
+
+    async function ftjget(url) {
+      const r = await fetch(url);
+      const t = await r.text();
+      let j = null; try { j = JSON.parse(t); } catch (e) { }
+      if (!r.ok) throw new Error((j && j.error) || ('HTTP ' + r.status));
+      return j;
+    }
+
+    $$('#ftTabs button').forEach(b => b.onclick = () => {
+      const f = b.dataset.f;
+      $$('#ftTabs button').forEach(x => x.classList.toggle('on', x === b));
+      $$('.ftsub').forEach(p => p.classList.toggle('on', p.id === 'ftsub-' + f));
+      if (f === 'backtest') setTimeout(() => { ftbChartInst && ftbChartInst.resize(); }, 50);
+      if (f === 'report' && !ftReportData) loadFtReport(false);
+    });
+
+    async function ftEnsureStrategies() {
+      if (ftStrategies) return ftStrategies;
+      try {
+        const d = await ftjget('/api/ft_strategies');
+        ftStrategies = d.strategies || [];
+        $('#ftb_strategy').innerHTML = ftStrategies.map(s =>
+          `<option value="${s.key}">${esc(s.name)}</option>`).join('');
+        $('#ftbNote').textContent = d.note || '';
+      } catch (e) { toast('策略列表加载失败'); }
+      return ftStrategies;
+    }
+
+    $('#ftbGo').onclick = ftRunOne;
+    $('#ftbCompare').onclick = ftRunCompare;
+    $('#ftbScan').onclick = ftRunScan;
+    $('#fteGo').onclick = ftRunEngine;
+    $('#ftrGo').onclick = () => loadFtReport(true);
+    $('#ftb_code').addEventListener('keydown', e => { if (e.key === 'Enter') ftRunOne(); });
+    $('#fte_code').addEventListener('keydown', e => { if (e.key === 'Enter') ftRunEngine(); });
+
+    async function ftRunOne() {
+      const code = $('#ftb_code').value.trim();
+      if (!/^\d{6}$/.test(code)) { toast('请输入6位股票代码'); return; }
+      await ftEnsureStrategies();
+      const go = $('#ftbGo'); go.disabled = true; go.textContent = '回测中…';
+      $('#ftbEmpty').textContent = '正在拉取K线并回测，请稍候…'; $('#ftbEmpty').style.display = 'block';
+      try {
+        const q = new URLSearchParams({ code, strategy: $('#ftb_strategy').value, lmt: $('#ftb_lmt').value || 500 });
+        const d = await ftjget('/api/ft_backtest?' + q.toString());
+        ftRenderOne(d);
+      } catch (e) {
+        $('#ftbEmpty').textContent = '回测失败：' + (e.message || '');
+      } finally {
+        go.disabled = false; go.textContent = '单策略回测';
+      }
+    }
+
+    const ftCard = (k, v, s, c) =>
+      `<div class="mcard"><div class="k">${k}</div><div class="v ${c || ''}">${v}</div><div class="s">${s || ''}</div></div>`;
+
+    /* ---------- 量化工具: 渲染单策略结果 ---------- */
+    function ftRenderOne(d) {
+      $('#ftbEmpty').style.display = 'none';
+      $('#ftbCards').style.display = 'grid';
+      $('#ftbChart').style.display = 'block';
+      $('#ftbCards').innerHTML =
+        ftCard('区间累计收益', (d.total_ret > 0 ? '+' : '') + d.total_ret + '%',
+          `${d.start_date} 起 · ${d.bars}交易日 · ${d.stock_name || ''} ${d.code || ''}`, cls(d.total_ret)) +
+        ftCard('年化收益', (d.annual > 0 ? '+' : '') + d.annual + '%', '按252日复利折算', cls(d.annual)) +
+        ftCard('最大回撤', d.maxdd + '%', '净值峰谷回撤', cls(d.maxdd)) +
+        ftCard('夏普比率', d.sharpe, 'rf=2%/年', cls(d.sharpe)) +
+        ftCard('索提诺', d.sortino, '下行波动调整', cls(d.sortino)) +
+        ftCard('卡玛比率', d.calmar, '年化÷最大回撤', cls(d.calmar)) +
+        ftCard('同期买入持有', (d.bench > 0 ? '+' : '') + d.bench + '%', '超额 ' + numS(d.excess) + '%', cls(d.bench)) +
+        ftCard('交易次数', d.trades_n + '笔', '完整买卖回合', '') +
+        ftCard('胜率', d.win_rate + '%', '按回合收益>0', cls(d.win_rate - 50)) +
+        ftCard('持仓仓位', d.exposure + '%', '时间加权', '');
+      /* 权益曲线 */
+      if (!ftbChartInst) {
+        ftbChartInst = echarts.init($('#ftbChart'));
+        window.addEventListener('resize', () => ftbChartInst && ftbChartInst.resize());
+      }
+      const eq = d.equity, dates = eq.map(e => e.date);
+      ftbChartInst.setOption({
+        animation: false, backgroundColor: 'transparent',
+        tooltip: {
+          trigger: 'axis', backgroundColor: '#1c232e', borderColor: '#26303f', textStyle: { color: '#d9e0ea', fontSize: 12 },
+          formatter(ps) {
+            const i = ps[0].dataIndex, e = eq[i];
+            let s = `${dates[i]}<br>策略净值 <b>${(e.v / 100000 * 100).toFixed(2)}</b>（期初=100）`;
+            if (e.b != null) s += `<br>买入持有 <b>${(e.b / 100000 * 100).toFixed(2)}</b>`;
+            if (e.sig != null) s += `<br>持仓状态：<b style="color:${e.sig ? '#f0524a' : '#8b95a5'}">${e.sig ? '持仓' : '空仓'}</b>`;
+            return s;
+          }
+        },
+        legend: { top: 0, data: ['策略净值', '买入持有(期初=100)'], textStyle: { color: '#8b95a5', fontSize: 11 }, itemWidth: 14 },
+        grid: { left: 56, right: 20, top: 28, bottom: 44 },
+        xAxis: { type: 'category', data: dates, axisLabel: { color: '#8b95a5', fontSize: 10 }, axisLine: { lineStyle: { color: '#26303f' } } },
+        yAxis: { scale: true, axisLabel: { color: '#8b95a5', fontSize: 10 }, splitLine: { lineStyle: { color: '#1e2632' } } },
+        dataZoom: [{ type: 'inside', start: 0, end: 100 }, { type: 'slider', bottom: 2, height: 16, start: 0, end: 100, borderColor: '#26303f', backgroundColor: '#161b22', fillerColor: 'rgba(74,158,255,.15)', textStyle: { color: '#8b95a5', fontSize: 10 } }],
+        series: [
+          {
+            name: '策略净值', type: 'line', data: eq.map(e => +(e.v / 1000).toFixed(2)), symbol: 'none',
+            lineStyle: { width: 1.6, color: '#4a9eff' }, itemStyle: { color: '#4a9eff' }
+          },
+          {
+            name: '买入持有(期初=100)', type: 'line', data: eq.map(e => e.b != null ? +(e.b / 1000).toFixed(2) : null),
+            symbol: 'none', lineStyle: { width: 1, type: 'dashed', color: '#c678dd' }, itemStyle: { color: '#c678dd' }
+          }
+        ]
+      }, true);
+      /* 交易明细 */
+      $('#ftbTable thead').innerHTML =
+        `<tr><th class="l">#</th><th class="l">买入日</th><th>买入价</th><th class="l">卖出日</th><th>卖出价</th>
+         <th>收益率</th><th>持仓天数</th><th>状态</th></tr>`;
+      $('#ftbTable tbody').innerHTML = (d.trades || []).slice().reverse().map((t, i) =>
+        `<tr><td class="l num" style="color:var(--muted)">${d.trades.length - i}</td>
+     <td class="l num">${esc(t.in_date)}</td><td class="num">${t.in_px}</td>
+     <td class="l num">${esc(t.out_date)}</td><td class="num">${t.out_px}</td>
+     <td class="num"><span class="pill ${cls(t.ret)}">${(t.ret > 0 ? '+' : '') + t.ret}%</span></td>
+     <td class="num">${t.days}</td>
+     <td class="num">${t.open_pos ? '<span class="pill up">持仓中</span>' : '已了结'}</td></tr>`).join('')
+        || '<tr><td colspan="8" class="empty">该区间策略未产生完整交易</td></tr>';
+      $('#ftbTableWrap').style.display = 'block';
+      toast(`一键回测完成：${d.name} · 收益 ${(d.total_ret > 0 ? '+' : '') + d.total_ret}%`);
+    }
+
+    /* ---------- 量化工具: 10策略横评 / 参数网格 ---------- */
+    async function ftRunCompare() {
+      const code = $('#ftb_code').value.trim();
+      if (!/^\d{6}$/.test(code)) { toast('请输入6位股票代码'); return; }
+      const go = $('#ftbCompare'); go.disabled = true; go.textContent = '横评中…';
+      $('#ftbEmpty').textContent = '10个策略逐一回测中，请稍候…'; $('#ftbEmpty').style.display = 'block';
+      try {
+        const d = await ftjget('/api/ft_compare?code=' + code + '&lmt=' + ($('#ftb_lmt').value || 500));
+        $('#ftbEmpty').style.display = 'none';
+        $('#ftbChart').style.display = 'none';
+        $('#ftbCards').style.display = 'grid';
+        const best = d.best || {};
+        $('#ftbCards').innerHTML =
+          ftCard('最佳策略', best.name || '--', `夏普 ${best.sharpe ?? '--'} · 收益 ${(best.total_ret > 0 ? '+' : '') + (best.total_ret ?? '')}%`, cls(best.total_ret)) +
+          ftCard('最佳收益', (best.total_ret > 0 ? '+' : '') + best.total_ret + '%', best.desc || '', cls(best.total_ret)) +
+          ftCard('最佳回撤', best.maxdd + '%', '最佳策略', cls(best.maxdd)) +
+          ftCard('中位数夏普', d.median_sharpe, `10策略中位数`, cls(d.median_sharpe)) +
+          ftCard('达标策略数', d.n_ok + '/10', '完成横评', '');
+        $('#ftbTable thead').innerHTML =
+          `<tr><th>#</th><th class="l">策略</th><th>分组</th><th>总收益</th><th>年化</th><th>最大回撤</th>
+           <th>夏普</th><th>交易</th><th>胜率</th><th>仓位</th></tr>`;
+        $('#ftbTable tbody').innerHTML = d.rows.map((r, i) => {
+          if (r.error) return `<tr><td>${i + 1}</td><td class="l">${esc(r.name)}</td><td colspan="8" class="down">出错: ${esc(r.error)}</td></tr>`;
+          return `<tr${i === 0 ? ' style="background:rgba(74,158,255,.07)"' : ''}>
+            <td class="num">${i + 1}</td><td class="l">${esc(r.name)}</td>
+            <td class="num">${esc(r.group)}</td>
+            <td class="num"><span class="pill ${cls(r.total_ret)}">${(r.total_ret > 0 ? '+' : '') + r.total_ret}%</span></td>
+            <td class="num ${cls(r.annual)}">${(r.annual > 0 ? '+' : '') + r.annual}%</td>
+            <td class="num">${r.maxdd}%</td>
+            <td class="num ${cls(r.sharpe)}">${r.sharpe}</td>
+            <td class="num">${r.trades_n}</td>
+            <td class="num">${r.win_rate}%</td>
+            <td class="num">${r.exposure}%</td></tr>`;
+        }).join('');
+        $('#ftbTableWrap').style.display = 'block';
+        toast(`横评完成：最佳 ${best.name || '--'} (夏普 ${best.sharpe ?? '--'})`);
+      } catch (e) {
+        $('#ftbEmpty').textContent = '横评失败：' + (e.message || '');
+      } finally {
+        go.disabled = false; go.textContent = '10策略横评';
+      }
+    }
+
+    async function ftRunScan() {
+      const code = $('#ftb_code').value.trim();
+      if (!/^\d{6}$/.test(code)) { toast('请输入6位股票代码'); return; }
+      await ftEnsureStrategies();
+      const key = $('#ftb_strategy').value;
+      const go = $('#ftbScan'); go.disabled = true; go.textContent = '扫描中…';
+      $('#ftbEmpty').textContent = '参数网格遍历回测中(组合较多)，请稍候…'; $('#ftbEmpty').style.display = 'block';
+      try {
+        const d = await ftjget(`/api/ft_scan?code=${code}&strategy=${key}&lmt=${$('#ftb_lmt').value || 500}`);
+        $('#ftbEmpty').style.display = 'none';
+        $('#ftbChart').style.display = 'none';
+        $('#ftbCards').style.display = 'grid';
+        const best = d.best || {};
+        const bp = Object.entries(best.params || {}).map(([k, v]) => `${k}=${v}`).join(', ') || '默认';
+        $('#ftbCards').innerHTML =
+          ftCard('最优参数', bp, d.note || '', '') +
+          ftCard('最优夏普', best.sharpe ?? '--', `${d.n} 个组合`, cls(best.sharpe)) +
+          ftCard('最优收益', best.total_ret != null ? ((best.total_ret > 0 ? '+' : '') + best.total_ret + '%') : '--', '最优组合', cls(best.total_ret)) +
+          ftCard('中位数夏普', d.median_sharpe, `${d.n} 组合中位数`, cls(d.median_sharpe)) +
+          ftCard('夏普极差', d.sharpe_gap, '最优组-最差组均值', '') +
+          ftCard('敏感维度', d.sensitive_dim, '对参数最敏感', '');
+        $('#ftbTable thead').innerHTML =
+          `<tr><th>#</th><th class="l">参数组合</th><th>总收益</th><th>年化</th><th>最大回撤</th>
+           <th>夏普</th><th>交易</th><th>胜率</th></tr>`;
+        $('#ftbTable tbody').innerHTML = d.rows.map((r, i) => {
+          const ps = Object.entries(r.params).map(([k, v]) => `${k}=${v}`).join(', ');
+          return `<tr${i === 0 ? ' style="background:rgba(74,158,255,.07)"' : ''}>
+            <td class="num">${i + 1}</td><td class="l num">${esc(ps)}</td>
+            <td class="num"><span class="pill ${cls(r.total_ret)}">${(r.total_ret > 0 ? '+' : '') + r.total_ret}%</span></td>
+            <td class="num ${cls(r.annual)}">${(r.annual > 0 ? '+' : '') + r.annual}%</td>
+            <td class="num">${r.maxdd}%</td>
+            <td class="num ${cls(r.sharpe)}">${r.sharpe}</td>
+            <td class="num">${r.trades_n}</td>
+            <td class="num">${r.win_rate}%</td></tr>`;
+        }).join('');
+        $('#ftbTableWrap').style.display = 'block';
+        toast(`扫描完成：${d.n}个组合 · 最优 ${bp}`);
+      } catch (e) {
+        $('#ftbEmpty').textContent = '扫描失败：' + (e.message || '');
+      } finally {
+        go.disabled = false; go.textContent = '参数网格扫描';
+      }
+    }
+
+    /* ---------- 量化工具: 策略引擎 ---------- */
+    async function ftRunEngine() {
+      const code = $('#fte_code').value.trim();
+      if (!/^\d{6}$/.test(code)) { toast('请输入6位股票代码'); return; }
+      const go = $('#fteGo'); go.disabled = true; go.textContent = '分析中…';
+      $('#fteEmpty').textContent = '正在拉取K线并计算多指标，请稍候…'; $('#fteEmpty').style.display = 'block';
+      try {
+        const d = await ftjget(`/api/ft_engine?code=${code}&lmt=${$('#fte_lmt').value || 300}`);
+        const a = d.analysis, s = d.suggest;
+        $('#fteEmpty').style.display = 'none';
+        $('#fteResult').style.display = 'block';
+        $('#fteCards').innerHTML =
+          ftCard('现价', a.price, `${d.stock_name || ''} ${d.code} · ${d.as_of}`, '') +
+          ftCard('MA14/18', `${a.ma14}/${a.ma18}`, a.ma14 > a.ma18 ? '金叉排列' : '死叉排列', cls(a.ma14 - a.ma18)) +
+          ftCard('MA20/60', `${a.ma20}/${a.ma60}`, '中长期趋势', '') +
+          ftCard('RSI14', a.rsi, a.rsi < 30 ? '超卖区' : (a.rsi > 70 ? '超买区' : '中性区'), cls(a.rsi - 50)) +
+          ftCard('KDJ', `K${a.k} D${a.d}`, `J=${a.j}`, cls(a.j - 50)) +
+          ftCard('MACD', a.macd, 'DIF与DEA关系', a.macd.indexOf('多头') >= 0 ? 'up' : 'down') +
+          ftCard('布林位置', a.bb_pos + '%', `${a.bb_lower} ~ ${a.bb_upper}`, a.bb_pos < 20 ? 'up' : (a.bb_pos > 80 ? 'down' : '')) +
+          ftCard('支撑/压力', `${a.support}/${a.resistance}`, '布林下轨/上轨', '') +
+          ftCard('ATR14', a.atr == null ? '--' : a.atr, '真实波幅均值', '');
+        $('#fteSug').innerHTML =
+          `<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+             <div style="font-size:26px;font-weight:800" class="${s.level === 'avoid' ? 'down' : (s.level === 'strong_buy' || s.level === 'buy' ? 'up' : '')}">${s.score}<span style="font-size:13px;color:var(--muted)">/${s.max_score}分</span></div>
+             <div style="font-size:16px;font-weight:700">${esc(s.recommend)}</div>
+             <div style="color:var(--muted);font-size:13px">${(s.reasons || []).map(esc).join(' · ')}</div>
+           </div>`;
+        $('#fteSignals').innerHTML = `<b>多指标信号：</b>${esc(a.signals)}`;
+        $('#ftFusion tbody').innerHTML = (d.fusion || []).map(f => {
+          if (f.error) return `<tr><td class="l">${esc(f.name)}</td><td colspan="2" class="down">${esc(f.error)}</td></tr>`;
+          return `<tr><td class="l">${esc(f.name)}</td>
+            <td><span class="pill ${f.holding ? 'up' : ''}">${f.holding ? '持仓中📈' : '空仓⬜'}</span></td>
+            <td class="l num">${f.last_action ? esc(f.last_action + ' ' + f.last_action_date) : '暂无信号'}</td></tr>`;
+        }).join('');
+        toast(`分析完成：${d.stock_name || code} · 建议 ${s.score}/${s.max_score}分`);
+      } catch (e) {
+        $('#fteEmpty').textContent = '分析失败：' + (e.message || '');
+      } finally {
+        go.disabled = false; go.textContent = '多指标共振分析';
+      }
+    }
+
+    /* ---------- 量化工具: 日报 ---------- */
+    async function loadFtReport(force) {
+      const go = $('#ftrGo'); go.disabled = true; go.textContent = '生成中…';
+      $('#ftrEmpty').textContent = '正在生成日报(大盘/分布/热点/评分)，首次约10~30秒…';
+      $('#ftrEmpty').style.display = 'block';
+      try {
+        const d = await ftjget('/api/ft_report' + (force ? '?force=1' : ''));
+        ftReportData = d;
+        ftRenderReport();
+      } catch (e) {
+        $('#ftrEmpty').textContent = '日报生成失败：' + (e.message || '');
+      } finally {
+        go.disabled = false; go.textContent = '生成今日日报';
+      }
+    }
+
+    const ftRow = (label, val, sub, clsName) =>
+      `<div class="frow"><span class="lbl">${label}</span>` +
+      (sub ? `<span class="sub">${sub}</span>` : '') +
+      `<span class="val ${clsName || ''}">${val}</span></div>`;
+
+    function ftRenderReport() {
+      const d = ftReportData; if (!d) return;
+      $('#ftrEmpty').style.display = 'none';
+      $('#ftrBody').style.display = 'block';
+      $('#ftrTime').textContent = `${d.report_time || ''} · ${(d.market_overview || []).length}个指数 · ` +
+        `涨跌 ${(d.breadth || {}).total || 0}家 · 缓存5分钟`;
+      const card = ftCard;
+      /* 指数卡片 */
+      $('#ftrIdx').innerHTML = (d.market_overview || []).map(x =>
+        card(x.name, x.latest, pctS(x.change_pct), cls(x.change_pct))).join('');
+      /* 涨跌分布 */
+      const b = d.breadth || {};
+      $('#ftrBreadth').innerHTML =
+        ftRow('上涨', b.up || 0, '', 'up') +
+        ftRow('平盘', b.flat || 0, '', '') +
+        ftRow('下跌', b.down || 0, '', 'down') +
+        ftRow('涨停(近似)', b.limit_up || 0, '', 'up') +
+        ftRow('跌停(近似)', b.limit_dn || 0, '', 'down') +
+        ftRow('全市场', b.total || 0, '只', '');
+      /* 热点行业 */
+      $('#ftrConcepts').innerHTML = (d.hot_concepts || []).map(c =>
+        ftRow(esc(c.name), pctS(c.chg), `涨${c.up}/跌${c.down}`, cls(c.chg))).join('')
+        || '<div class="frow"><span class="lbl">暂无数据(资讯信号构建中)</span></div>';
+      /* 热门个股 */
+      $('#ftrHot').innerHTML = (d.hot_stocks || []).map(s =>
+        ftRow(`${esc(s.name)} <span style="color:var(--muted);font-size:11px">${s.code}</span>`,
+          pctS(s.change_pct), `成交 ${amtYi(s.amount)}`, cls(s.change_pct))).join('')
+        || '<div class="frow"><span class="lbl">暂无数据(全市场快照构建中)</span></div>';
+      /* 自选评分 */
+      $('#ftrWatch').innerHTML = (d.watch_scores || []).map(s =>
+        ftRow(`${esc(s.name)} <span style="color:var(--muted);font-size:11px">${s.code}</span>`,
+          `${s.score}/60`, `${s.direction} ${(s.signals || []).join(' ')}`,
+          s.score >= 30 ? 'up' : (s.score < 20 ? 'down' : ''))).join('')
+        || '<div class="frow"><span class="lbl">自选股为空或数据不足</span></div>';
+      /* 技术信号 */
+      $('#ftrSignals').innerHTML = (d.strategy_signals || []).map(s =>
+        `<div class="frow"><span class="lbl">${esc(s.name)}</span><span class="sub">${esc(s.signals || '')}</span></div>`).join('')
+        || '<div class="frow"><span class="lbl">暂无数据</span></div>';
+      /* 融合策略 */
+      $('#ftrFusion').innerHTML = (d.fusion || []).map(f =>
+        ftRow(esc(f.name), f.holding ? '持仓中📈' : '空仓⬜',
+          f.last_action ? `最近${f.last_action} ${f.last_action_date}` : '暂无信号',
+          f.holding ? 'up' : '')).join('')
+        || '<div class="frow"><span class="lbl">暂无数据</span></div>';
+      toast('日报已生成');
+    }
+
+    $('#ftrCopy').onclick = async () => {
+      if (!ftReportData || !ftReportData.markdown) { toast('请先生成日报'); return; }
+      try {
+        await navigator.clipboard.writeText(ftReportData.markdown);
+        toast('Markdown 已复制到剪贴板');
+      } catch (e) {
+        const ta = document.createElement('textarea');
+        ta.value = ftReportData.markdown;
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); toast('Markdown 已复制'); }
+        catch (e2) { toast('复制失败，请手动选择'); }
+        document.body.removeChild(ta);
+      }
+    };
 
     /* ---------- 个股资金流（drawer） ---------- */
     let flowData = null;
