@@ -26,7 +26,7 @@
 
 1. 双击 **`打包成EXE.bat`**
 2. 等 2~5 分钟，产物在 **`dist\股票盯盘.exe`**（约 60MB）
-3. 这个 exe 是单文件、绿色免安装，可复制到任意 Windows 10/11 电脑双击运行
+3. 这个 exe 是单文件、绿色免安装，双击直接弹出应用窗口（无控制台黑框），可复制到任意 Windows 10/11 电脑运行
 
 > 打包必须在 Windows 电脑上完成（PyInstaller 不支持跨系统交叉打包），所以我把脚本写好放在包里，你那边一键执行即可。
 
@@ -39,6 +39,7 @@
 | 窗口空白 | 等 3~5 秒服务启动；仍空白则看控制台是否有红色报错 |
 | 自选股会不会丢 | 不会。自选股由后端保存成 JSON 文件 `watchlist.json`：源码运行时在项目目录，打包成 exe 后与 exe 同目录（该目录不可写时自动回退到 `%LOCALAPPDATA%\StockDashboard\`）。添加/移除/清空都会即时写入，每次打开自动读取。想手动改也行，文件内容形如 `{"codes": ["600519","300750"]}` |
 | 杀毒软件拦截 exe | PyInstaller 单文件常见误报，添加信任即可 |
+| exe 双击后没反应 / 想看启动报错 | 打包版无控制台黑框：启动失败会弹系统错误提示框，运行日志写在 `%LOCALAPPDATA%\StockDashboard\run.log` |
 | 数据不显示 | 检查能否访问新浪/腾讯财经（公司内网可能拦行情接口） |
 | 报 `ZoneInfoNotFoundError: 'No time zone found with key Asia/Shanghai'` / `No module named 'tzdata'` | Windows 不自带 IANA 时区库，Python 的 `zoneinfo` 需要 PyPI 的 `tzdata` 包。已加入 `requirements.txt`，重新双击 `安装并启动.bat` 即可；程序也已内置 UTC+8 兜底，缺包也能启动 |
 | 想改窗口大小 | 默认 1360×900，拖拽边框即可，最小 980×640 |

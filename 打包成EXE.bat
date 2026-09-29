@@ -22,7 +22,7 @@ if errorlevel 1 python -m pip install -q -i https://mirrors.aliyun.com/pypi/simp
 if errorlevel 1 python -m pip install -q pyinstaller
 
 echo [2/3] 正在打包 (约2-5分钟, 产物约60MB)...
-python -m PyInstaller --onefile --noconfirm --clean ^
+python -m PyInstaller --onefile --noconsole --noconfirm --clean ^
     --name "股票盯盘" ^
     --add-data "static;static" ^
     --collect-all webview ^
@@ -32,6 +32,7 @@ python -m PyInstaller --onefile --noconfirm --clean ^
     --hidden-import uvicorn.protocols.http.auto ^
     --hidden-import uvicorn.protocols.websockets.auto ^
     --hidden-import uvicorn.lifespan.on ^
+    --hidden-import finance_toolkit ^
     desktop.py
 
 if errorlevel 1 (
@@ -44,7 +45,6 @@ echo.
 echo [3/3] 打包完成!
 echo 产物位置: %~dp0dist\股票盯盘.exe
 echo 双击即可运行, 无需安装 Python, 可复制到任意 Windows 10/11 电脑。
-echo 首次运行会先启动服务(约3秒)再弹窗, 请稍候。
 echo.
 explorer "%~dp0dist"
 pause

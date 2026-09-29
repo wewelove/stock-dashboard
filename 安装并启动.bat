@@ -43,18 +43,18 @@ python -m pip install -q --no-cache-dir -i https://mirrors.aliyun.com/pypi/simpl
 
 set "PIP_FAIL=1"
 
-echo   [2/3] 尝试 1/3: 清华源 ...
+echo [2/3] 尝试 1/3: 清华源 ...
 python -m pip install -q -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
 if not errorlevel 1 set "PIP_FAIL="
 
 if defined PIP_FAIL (
-    echo   [2/3] 尝试 2/3: 阿里云源 ...
+    echo [2/3] 尝试 2/3: 阿里云源 ...
     python -m pip install -q -i https://mirrors.aliyun.com/pypi/simple/ -r requirements.txt
     if not errorlevel 1 set "PIP_FAIL="
 )
 
 if defined PIP_FAIL (
-    echo   [2/3] 尝试 3/3: 官方源 ...
+    echo [2/3] 尝试 3/3: 官方源 ...
     python -m pip install -q -r requirements.txt
     if not errorlevel 1 set "PIP_FAIL="
 )
