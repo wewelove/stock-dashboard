@@ -1028,13 +1028,6 @@
     }
 
     /* 量化工具 finance_toolkit */
-    .ftsub {
-      display: none
-    }
-
-    .ftsub.on {
-      display: block
-    }
 
     #ftbChart {
       height: 340px;
@@ -1387,7 +1380,7 @@
   <div class="wrap">
 
     <div class="topbar">
-      <div class="brand">股票盯盘<small>自选 · 榜单 · 选股 · 资讯 · 量化</small></div>
+      <div class="brand">股票盯盘<small>自选 · 榜单 · 选股 · 资讯 · 回测 · 引擎 · 日报</small></div>
       <span class="badge" id="phaseBadge">加载中</span>
       <div class="updated" id="updated">--</div>
       <div class="bellwrap" id="bellWrap">
@@ -1424,7 +1417,9 @@
       <button data-tab="rank">市场榜单</button>
       <button data-tab="scr">条件选股</button>
       <button data-tab="news">资讯政策</button>
-      <button data-tab="ft">量化工具</button>
+      <button data-tab="bt">策略回测</button>
+      <button data-tab="engine">策略引擎</button>
+      <button data-tab="report">日报生成</button>
     </div>
 
     <!-- 自选 -->
@@ -1593,16 +1588,9 @@
       </div>
     </div>
 
-    <!-- 量化工具 finance_toolkit: 一键回测 / 策略引擎 / 日报 -->
-    <div class="tabpane" id="pane-ft">
-      <div class="subtabs" id="ftTabs">
-        <button data-f="backtest" class="on">一键回测</button>
-        <button data-f="engine">策略引擎</button>
-        <button data-f="report">日报生成</button>
-      </div>
-
-      <!-- 一键回测 -->
-      <div class="ftsub on" id="ftsub-backtest">
+    <!-- 策略回测 -->
+    <div class="tabpane" id="pane-bt">
+      
         <div class="scrform">
           <div class="fgrid btgrid">
             <div class="fitem"><label>股票代码</label><input id="ftb_code" value="000009" placeholder="如 000009"></div>
@@ -1628,9 +1616,9 @@
         <div class="empty" id="ftbEmpty">选择策略点击「单策略回测」，或用「10策略横评」一次跑完 10 个策略</div>
       </div>
 
-      <!-- 策略引擎 -->
-      <div class="ftsub" id="ftsub-engine">
-        <div class="scrform">
+    <!-- 策略引擎 -->
+    <div class="tabpane" id="pane-engine">
+      <div class="scrform">
           <div class="fgrid btgrid">
             <div class="fitem"><label>股票代码</label><input id="fte_code" value="000009" placeholder="如 000009"></div>
             <div class="fitem"><label>K线条数</label><input id="fte_lmt" type="number" value="300" min="120" max="800">
@@ -1665,47 +1653,46 @@
       </div>
 
       <!-- 日报生成 -->
-      <div class="ftsub" id="ftsub-report">
-        <div class="fbtns" style="margin-bottom:12px">
-          <button class="go" id="ftrGo">生成今日日报</button>
-          <button class="rst" id="ftrCopy">复制Markdown</button>
-          <span class="paramnote" id="ftrTime"></span>
-        </div>
-        <div id="ftrBody" style="display:none">
-          <div class="mcards" id="ftrIdx"></div>
-          <div class="ftgrid2">
-            <div class="ftc">
-              <div class="ftct">📊 涨跌分布</div>
-              <div class="ftlist" id="ftrBreadth"></div>
-            </div>
-            <div class="ftc">
-              <div class="ftct">🏷️ 热点行业(成分均涨幅)</div>
-              <div class="ftlist" id="ftrConcepts"></div>
-            </div>
-          </div>
-          <div class="ftgrid2">
-            <div class="ftc">
-              <div class="ftct">🔥 热门个股 Top10(成交额)</div>
-              <div class="ftlist" id="ftrHot"></div>
-            </div>
-            <div class="ftc">
-              <div class="ftct">🎯 自选股 60 分评分</div>
-              <div class="ftlist" id="ftrWatch"></div>
-            </div>
-          </div>
-          <div class="ftgrid2">
-            <div class="ftc">
-              <div class="ftct">🔍 技术信号(MACD/RSI/布林)</div>
-              <div class="ftlist" id="ftrSignals"></div>
-            </div>
-            <div class="ftc">
-              <div class="ftct">⚙️ 融合策略状态</div>
-              <div class="ftlist" id="ftrFusion"></div>
-            </div>
-          </div>
-        </div>
-        <div class="empty" id="ftrEmpty">点击「生成今日日报」(首次约需10~30秒，结果缓存5分钟)</div>
+    <div class="tabpane" id="pane-report">
+      <div class="fbtns" style="margin-bottom:12px">
+        <button class="go" id="ftrGo">生成今日日报</button>
+        <button class="rst" id="ftrCopy">复制Markdown</button>
+        <span class="paramnote" id="ftrTime"></span>
       </div>
+      <div id="ftrBody" style="display:none">
+        <div class="mcards" id="ftrIdx"></div>
+        <div class="ftgrid2">
+          <div class="ftc">
+            <div class="ftct">📊 涨跌分布</div>
+            <div class="ftlist" id="ftrBreadth"></div>
+          </div>
+          <div class="ftc">
+            <div class="ftct">🏷️ 热点行业(成分均涨幅)</div>
+            <div class="ftlist" id="ftrConcepts"></div>
+          </div>
+        </div>
+        <div class="ftgrid2">
+          <div class="ftc">
+            <div class="ftct">🔥 热门个股 Top10(成交额)</div>
+            <div class="ftlist" id="ftrHot"></div>
+          </div>
+          <div class="ftc">
+            <div class="ftct">🎯 自选股 60 分评分</div>
+            <div class="ftlist" id="ftrWatch"></div>
+          </div>
+        </div>
+        <div class="ftgrid2">
+          <div class="ftc">
+            <div class="ftct">🔍 技术信号(MACD/RSI/布林)</div>
+            <div class="ftlist" id="ftrSignals"></div>
+          </div>
+          <div class="ftc">
+            <div class="ftct">⚙️ 融合策略状态</div>
+            <div class="ftlist" id="ftrFusion"></div>
+          </div>
+        </div>
+      </div>
+      <div class="empty" id="ftrEmpty">点击「生成今日日报」(首次约需10~30秒，结果缓存5分钟)</div>
     </div>
 
     <!-- 选股 -->
@@ -1914,10 +1901,14 @@
       if (tab === 'rank') renderRank();
       if (tab === 'scr') { if (!SIG) refreshNews(false); if (!scrHasResult) applyScreener(); }
       if (tab === 'news') { if (!NC) loadNewsArchive(false); else renderNCChart(); }
-      if (tab === 'ft') {
+      if (tab === 'bt') {
         ftEnsureStrategies();
         setTimeout(() => { ftbChartInst && ftbChartInst.resize(); }, 50);
       }
+      if (tab === 'engine') {
+        ftEnsureStrategies();
+      }
+      if (tab === 'report' && !ftReportData) loadFtReport(false);
     });
 
     /* ---------- 资讯/政策信号 ---------- */
@@ -2646,14 +2637,6 @@
       if (!r.ok) throw new Error((j && j.error) || ('HTTP ' + r.status));
       return j;
     }
-
-    $$('#ftTabs button').forEach(b => b.onclick = () => {
-      const f = b.dataset.f;
-      $$('#ftTabs button').forEach(x => x.classList.toggle('on', x === b));
-      $$('.ftsub').forEach(p => p.classList.toggle('on', p.id === 'ftsub-' + f));
-      if (f === 'backtest') setTimeout(() => { ftbChartInst && ftbChartInst.resize(); }, 50);
-      if (f === 'report' && !ftReportData) loadFtReport(false);
-    });
 
     async function ftEnsureStrategies() {
       if (ftStrategies) return ftStrategies;
