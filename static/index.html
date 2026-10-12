@@ -1027,18 +1027,6 @@
       margin-top: 2px
     }
 
-    #btChart {
-      height: 340px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      margin-bottom: 12px
-    }
-
-    #btChart .empty {
-      height: 100%
-    }
-
     /* 量化工具 finance_toolkit */
     .ftsub {
       display: none
@@ -1399,7 +1387,7 @@
   <div class="wrap">
 
     <div class="topbar">
-      <div class="brand">股票盯盘<small>自选 · 榜单 · 选股 · 资讯 · 回测 · 量化</small></div>
+      <div class="brand">股票盯盘<small>自选 · 榜单 · 选股 · 资讯 · 量化</small></div>
       <span class="badge" id="phaseBadge">加载中</span>
       <div class="updated" id="updated">--</div>
       <div class="bellwrap" id="bellWrap">
@@ -1436,7 +1424,6 @@
       <button data-tab="rank">市场榜单</button>
       <button data-tab="scr">条件选股</button>
       <button data-tab="news">资讯政策</button>
-      <button data-tab="bt">策略回测</button>
       <button data-tab="ft">量化工具</button>
     </div>
 
@@ -1604,55 +1591,6 @@
       <div class="nclist" id="ncList">
         <div class="empty">加载中…</div>
       </div>
-    </div>
-
-    <!-- 策略回测 -->
-    <div class="tabpane" id="pane-bt">
-      <div class="scrform">
-        <div class="fgrid btgrid">
-          <div class="fitem"><label>股票代码</label><input id="bt_code" value="600519" placeholder="如 600519"></div>
-          <div class="fitem"><label>策略</label><select id="bt_strategy">
-              <option value="ma_cross">双均线择时</option>
-              <option value="macd">MACD金叉死叉</option>
-              <option value="rsi">RSI超买超卖</option>
-              <option value="breakout">唐奇安突破</option>
-            </select></div>
-          <div class="fitem" id="bt_p_fast"><label>快线(日)</label><input id="bt_fast" type="number" value="5"></div>
-          <div class="fitem" id="bt_p_slow"><label>慢线(日)</label><input id="bt_slow" type="number" value="20"></div>
-          <div class="fitem" id="bt_p_n1" style="display:none"><label>突破窗口(日)</label><input id="bt_n1" type="number"
-              value="20"></div>
-          <div class="fitem" id="bt_p_n2" style="display:none"><label>跌破窗口(日)</label><input id="bt_n2" type="number"
-              value="10"></div>
-          <div class="fitem" id="bt_p_rsi" style="display:none"><label>RSI超卖/超买</label>
-            <div class="pair"><input id="bt_rsi_low" type="number" value="30"><input id="bt_rsi_high" type="number"
-                value="70"></div>
-          </div>
-          <div class="fitem"><label>K线条数(约2条=1年)</label><input id="bt_lmt" type="number" value="500" min="120"
-              max="800"></div>
-        </div>
-        <div class="fbtns">
-          <button class="go" id="btGo">开始回测</button>
-          <span class="paramnote">收盘出信号 · 次日开盘成交 · 单边费率0.12% · 期初资金10万</span>
-        </div>
-      </div>
-      <div class="mcards" id="btCards" style="display:none"></div>
-      <div id="btChart" style="display:none"></div>
-      <div class="tscroll" id="btTradesWrap" style="display:none">
-        <table id="btTrades">
-          <thead>
-            <tr>
-              <th class="l">#</th>
-              <th class="l">买入日</th>
-              <th>买入价</th>
-              <th class="l">卖出日</th>
-              <th>卖出价</th>
-              <th>收益率</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <div class="empty" id="btEmpty">输入代码与策略参数，点击"开始回测"</div>
     </div>
 
     <!-- 量化工具 finance_toolkit: 一键回测 / 策略引擎 / 日报 -->
@@ -1976,7 +1914,6 @@
       if (tab === 'rank') renderRank();
       if (tab === 'scr') { if (!SIG) refreshNews(false); if (!scrHasResult) applyScreener(); }
       if (tab === 'news') { if (!NC) loadNewsArchive(false); else renderNCChart(); }
-      if (tab === 'bt') { setTimeout(() => { btChartInst && btChartInst.resize(); }, 50); }
       if (tab === 'ft') {
         ftEnsureStrategies();
         setTimeout(() => { ftbChartInst && ftbChartInst.resize(); }, 50);
@@ -2698,101 +2635,6 @@
         orig(d);
       };
     })();
-
-    /* ---------- 回测 ---------- */
-    let btResult = null, btChartInst = null;
-    $('#bt_strategy').onchange = () => {
-      const s = $('#bt_strategy').value;
-      $('#bt_p_fast').style.display = s === 'ma_cross' ? '' : 'none';
-      $('#bt_p_slow').style.display = s === 'ma_cross' ? '' : 'none';
-      $('#bt_p_n1').style.display = s === 'breakout' ? '' : 'none';
-      $('#bt_p_n2').style.display = s === 'breakout' ? '' : 'none';
-      $('#bt_p_rsi').style.display = s === 'rsi' ? '' : 'none';
-    };
-    $('#btGo').onclick = runBacktest;
-    $('#bt_code').addEventListener('keydown', e => { if (e.key === 'Enter') runBacktest(); });
-
-    async function runBacktest() {
-      const code = $('#bt_code').value.trim();
-      if (!/^\d{6}$/.test(code)) { toast('请输入6位股票代码'); return; }
-      const go = $('#btGo'); go.disabled = true; go.textContent = '回测中…';
-      $('#btEmpty').textContent = '正在拉取K线并回测，请稍候…'; $('#btEmpty').style.display = 'block';
-      try {
-        const q = new URLSearchParams({
-          code, strategy: $('#bt_strategy').value,
-          fast: $('#bt_fast').value || 5, slow: $('#bt_slow').value || 20,
-          n1: $('#bt_n1').value || 20, n2: $('#bt_n2').value || 10,
-          rsi_low: $('#bt_rsi_low').value || 30, rsi_high: $('#bt_rsi_high').value || 70,
-          lmt: $('#bt_lmt').value || 500,
-        });
-        const d = await jget('/api/backtest?' + q.toString());
-        if (d && d.error) { $('#btEmpty').textContent = '回测失败：' + d.error; return; }
-        btResult = d;
-        renderBacktest();
-      } catch (e) {
-        $('#btEmpty').textContent = '回测失败：' + (e.message || '');
-      } finally {
-        go.disabled = false; go.textContent = '开始回测';
-      }
-    }
-    function renderBacktest() {
-      const d = btResult; if (!d) return;
-      $('#btEmpty').style.display = 'none';
-      $('#btCards').style.display = 'grid';
-      $('#btChart').style.display = 'block';
-      $('#btTradesWrap').style.display = 'block';
-      const card = (k, v, s, c) => `<div class="mcard"><div class="k">${k}</div><div class="v ${c || ''}">${v}</div><div class="s">${s || ''}</div></div>`;
-      $('#btCards').innerHTML =
-        card('区间累计收益', (d.total_ret > 0 ? '+' : '') + d.total_ret + '%', `${d.from} ~ ${d.to} (${d.days}交易日)`, cls(d.total_ret)) +
-        card('年化收益', (d.annual > 0 ? '+' : '') + d.annual + '%', '按252日复利折算', cls(d.annual)) +
-        card('最大回撤', d.maxdd + '%', '净值峰值回撤', cls(d.maxdd)) +
-        card('同期买入持有', (d.bench > 0 ? '+' : '') + d.bench + '%', '策略跑赢 ' + ((d.total_ret - d.bench) > 0 ? '+' : '') + (d.total_ret - d.bench).toFixed(2) + '%', cls(d.bench)) +
-        card('超额收益', (d.total_ret - d.bench > 0 ? '+' : '') + (d.total_ret - d.bench).toFixed(2) + '%', '相对买入持有', cls(d.total_ret - d.bench)) +
-        card('交易次数', d.trades_n + '笔', '完整买卖回合', '') +
-        card('胜率', d.win_rate == null ? '--' : d.win_rate + '%', '按回合收益>0', d.win_rate != null ? cls(d.win_rate - 50) : '') +
-        card('持仓仓位', d.exposure + '%', '时间加权', '');
-      /* 权益曲线 */
-      if (!btChartInst) { btChartInst = echarts.init($('#btChart')); window.addEventListener('resize', () => btChartInst && btChartInst.resize()); }
-      const eq = d.equity;
-      const eqv = eq.map(e => +(e.v / 1000).toFixed(2));          // 千元
-      const dates = eq.map(e => e.date);
-      btChartInst.setOption({
-        animation: false, backgroundColor: 'transparent',
-        tooltip: {
-          trigger: 'axis', backgroundColor: '#1c232e', borderColor: '#26303f', textStyle: { color: '#d9e0ea', fontSize: 12 },
-          formatter(ps) {
-            const i = ps[0].dataIndex, e = eq[i];
-            let s = `${dates[i]}<br>策略净值 <b>${(e.v / 100000 * 100).toFixed(2)}</b>（期初=100）`;
-            if (e.sig != null) s += `<br>持仓状态：<b style="color:${e.sig ? '#f0524a' : '#8b95a5'}">${e.sig ? '持仓' : '空仓'}</b>`;
-            return s;
-          }
-        },
-        legend: { top: 0, data: ['策略净值', '买入持有(期初=100)'], textStyle: { color: '#8b95a5', fontSize: 11 }, itemWidth: 14 },
-        grid: { left: 56, right: 20, top: 28, bottom: 44 },
-        xAxis: { type: 'category', data: dates, axisLabel: { color: '#8b95a5', fontSize: 10 }, axisLine: { lineStyle: { color: '#26303f' } } },
-        yAxis: { scale: true, axisLabel: { color: '#8b95a5', fontSize: 10, formatter: v => v }, splitLine: { lineStyle: { color: '#1e2632' } } },
-        dataZoom: [{ type: 'inside', start: 0, end: 100 }, { type: 'slider', bottom: 2, height: 16, start: 0, end: 100, borderColor: '#26303f', backgroundColor: '#161b22', fillerColor: 'rgba(74,158,255,.15)', textStyle: { color: '#8b95a5', fontSize: 10 } }],
-        series: [
-          {
-            name: '策略净值', type: 'line', data: eqv, symbol: 'none', lineStyle: { width: 1.6, color: '#4a9eff' },
-            itemStyle: { color: '#4a9eff' },
-            markArea: { silent: true, itemStyle: { color: 'rgba(240,82,74,.05)' }, data: [] }
-          },
-          {
-            name: '买入持有(期初=100)', type: 'line', data: eq.map(e => e.b != null ? e.b : null), symbol: 'none',
-            lineStyle: { width: 1, type: 'dashed', color: '#c678dd' }, itemStyle: { color: '#c678dd' }
-          }
-        ]
-      }, true);
-      /* 交易明细 */
-      $('#btTrades tbody').innerHTML = (d.trades || []).slice().reverse().map((t, i) =>
-        `<tr><td class="l num" style="color:var(--muted)">${d.trades.length - i}</td>
-    <td class="l num">${esc(t.in_date)}</td><td class="num">${t.in_px}</td>
-    <td class="l num">${esc(t.out_date)}</td><td class="num">${t.out_px}</td>
-    <td class="num"><span class="pill ${cls(t.ret)}">${(t.ret > 0 ? '+' : '') + t.ret}%</span></td></tr>`).join('')
-        || '<tr><td colspan="6" class="empty">该区间策略未产生完整交易</td></tr>';
-      toast(`回测完成：${d.strategy_name} · 收益 ${(d.total_ret > 0 ? '+' : '') + d.total_ret}%`);
-    }
 
     /* ---------- 量化工具 finance_toolkit ---------- */
     let ftbChartInst = null, ftStrategies = null, ftReportData = null;

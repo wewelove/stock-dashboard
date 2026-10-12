@@ -157,7 +157,7 @@ def main():
         try:
             import webview  # pywebview
             webview.create_window(
-                "股票盯盘 · 自选 · 榜单 · 选股 · 资讯 · 回测 · 量化",
+                "股票盯盘 · 自选 · 榜单 · 选股 · 资讯 · 量化",
                 URL,
                 width=1360, height=900,
                 min_size=(980, 640),
