@@ -1,6 +1,6 @@
-# 股票盯盘 · Windows 桌面版
+# 股票盯盘 · 跨平台桌面版 (Windows / Linux)
 
-把网页版封装成 Windows 桌面应用，数据、功能与线上版完全一致（自选盯盘 / 市场榜单 / 条件选股 / 资讯·政策 / 策略回测 / 策略引擎 / 日报生成 / 异动提醒 / 资金流向 / 龙虎榜·北向）。
+把网页版封装成桌面应用，数据、功能与线上版完全一致（自选盯盘 / 市场榜单 / 条件选股 / 资讯·政策 / 策略回测 / 策略引擎 / 日报生成 / 异动提醒 / 资金流向 / 龙虎榜·北向）。
 
 **策略回测**标签页（零依赖纯 Python 移植 `finance_toolkit`，无需安装 pandas/numpy）：
 
@@ -8,9 +8,11 @@
 - **策略引擎**：多指标共振实时分析（MA/KDJ/MACD/BOLL/RSI/ATR）→ 0~60 分买入建议 + 融合策略当前持仓状态
 - **日报生成**：大盘概览、涨跌分布、热点行业/个股、自选评分、多策略信号、融合持仓，一键复制 Markdown
 
-## 两种使用方式
+## 使用方式
 
-### 方式一：直接运行（推荐，需安装 Python）
+### Windows 用户
+
+#### 方式一：直接运行（推荐，需安装 Python）
 
 1. 双击 **`安装并启动.bat`**
    - 首次运行会自动：创建独立环境 → 下载依赖（1~2 分钟，走清华镜像）→ 启动
@@ -20,7 +22,7 @@
 
 之后每次使用都双击 `安装并启动.bat` 即可（依赖已装好，秒开）。
 
-### 方式二：打包成单个 EXE（免装 Python，可拷给别人）
+#### 方式二：打包成单个 EXE（免装 Python，可拷给别人）
 
 在已跑通"方式一"的电脑上：
 
@@ -30,16 +32,50 @@
 
 > 打包必须在 Windows 电脑上完成（PyInstaller 不支持跨系统交叉打包），所以我把脚本写好放在包里，你那边一键执行即可。
 
+---
+
+### Linux (Ubuntu 24.04 / Debian 12 / 兼容发行版) 用户
+
+#### 方式一：一键安装并运行
+
+```bash
+# 赋予执行权限 (仅首次需要)
+chmod +x install.sh run.sh build.sh
+
+# 安装依赖并启动 (首次运行会自动创建虚拟环境、安装依赖)
+./install.sh
+```
+
+#### 方式二：日常启动 (已安装环境后)
+
+```bash
+./run.sh
+```
+
+#### 方式三：打包为单文件可执行程序
+
+```bash
+# 需先运行过 install.sh
+./build.sh
+# 产物: dist/股票盯盘 (约 60-80MB，单文件，免装 Python)
+# 目标机器需安装: sudo apt install -y libwebkit2gtk-4.1-0
+```
+
+> **注意**: PyInstaller 不支持跨平台打包。Linux 上打包只能产出 Linux 程序，Windows 程序需在 Windows 上打包。
+
+---
+
 ## 常见问题
 
 | 问题 | 处理 |
 | --- | --- |
-| 双击 bat 闪退 | 右键"以管理员身份运行"；或先开 cmd 再拖入 bat 回车，看报错信息 |
-| 报 `Could not find a version that satisfies the requirement fastapi` | 通常是本机 TLS 证书吊销检查（CRL/OCSP）被墙或内网拦截，导致清华源握手失败（与"包不存在/版本太旧"无关）。脚本已内置三源自动回退（清华 → 阿里云 → 官方），一般可自动解决。手动方案见下方"依赖安装失败怎么办" |
+| 双击 bat 闪退 (Windows) | 右键"以管理员身份运行"；或先开 cmd 再拖入 bat 回车，看报错信息 |
+| 报 `Could not find a version that satisfies the requirement fastapi` | 通常是本机 TLS 证书吊销检查（CRL/OCSP）被墙或内网拦截，导致清华源握手失败。脚本已内置三源自动回退（清华 → 阿里云 → 官方），一般可自动解决 |
 | 窗口空白 | 等 3~5 秒服务启动；仍空白则看控制台是否有红色报错 |
-| 自选股会不会丢 | 不会。自选股由后端保存成 JSON 文件 `watchlist.json`：源码运行时在项目目录，打包成 exe 后与 exe 同目录（该目录不可写时自动回退到 `%LOCALAPPDATA%\StockDashboard\`）。添加/移除/清空都会即时写入，每次打开自动读取。想手动改也行，文件内容形如 `{"codes": ["600519","300750"]}` |
+| Linux 报 `ModuleNotFoundError: No module named 'webview'` / 窗口不弹出 | 需安装 WebView 依赖：`sudo apt update && sudo apt install -y libwebkit2gtk-4.1-0` (Ubuntu 24.04) 或 `libwebkit2gtk-4.0-37` (Ubuntu 22.04) |
+| 自选股会不会丢 | 不会。自选股由后端保存成 JSON 文件 `watchlist.json`：源码运行时在项目目录，打包成 exe 后与 exe 同目录（该目录不可写时自动回退到 `%LOCALAPPDATA%\StockDashboard\` / `~/.local/share/StockDashboard/`）。添加/移除/清空都会即时写入，每次打开自动读取 |
 | 杀毒软件拦截 exe | PyInstaller 单文件常见误报，添加信任即可 |
-| exe 双击后没反应 / 想看启动报错 | 打包版无控制台黑框：启动失败会弹系统错误提示框，运行日志写在 `%LOCALAPPDATA%\StockDashboard\run.log` |
+| exe 双击后没反应 / 想看启动报错 | 打包版无控制台黑框：启动失败会弹系统错误提示框，运行日志写在 `%LOCALAPPDATA%\StockDashboard\run.log` / `~/.local/share/StockDashboard/run.log` |
 | 数据不显示 | 检查能否访问新浪/腾讯财经（公司内网可能拦行情接口） |
 | 报 `ZoneInfoNotFoundError: 'No time zone found with key Asia/Shanghai'` / `No module named 'tzdata'` | Windows 不自带 IANA 时区库，Python 的 `zoneinfo` 需要 PyPI 的 `tzdata` 包。已加入 `requirements.txt`，重新双击 `安装并启动.bat` 即可；程序也已内置 UTC+8 兜底，缺包也能启动 |
 | 想改窗口大小 | 默认 1360×900，拖拽边框即可，最小 980×640 |
@@ -55,7 +91,10 @@ a-stock-dashboard/
 ├── watchlist.json      # 自选股数据（自动生成，可删除即恢复为空）
 ├── requirements.txt    # 依赖清单
 ├── 安装并启动.bat       # ← Windows 双击运行
-└── 打包成EXE.bat        # ← Windows 双击打包
+├── 打包成EXE.bat        # ← Windows 双击打包
+├── install.sh          # ← Linux 一键安装并启动
+├── run.sh              # ← Linux 日常启动
+└── build.sh            # ← Linux 打包为单文件
 ```
 
 ## 数据与免责声明
