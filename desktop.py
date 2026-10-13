@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-股票盯盘 - Windows 桌面启动器
-优先使用 pywebview 打开原生桌面窗口(Edge WebView2 内核, Win10/11 自带)；
+股票盯盘 - 跨平台桌面启动器
+优先使用 pywebview 打开原生桌面窗口：
+- Windows: Edge WebView2 内核 (Win10/11 自带)
+- Linux: GTK/WebKit 或 Qt/WebEngine
+- macOS: Cocoa/WebKit
 若 pywebview 未安装或启动失败, 自动回退为系统默认浏览器打开。
 """
 import os
@@ -143,6 +146,51 @@ def start_server():
     return False
 
 
+def _setup_linux_qt_env():
+    """配置 Linux 下 Qt WebEngine 所需的环境变量"""
+    if sys.platform.startswith("linux"):
+        # 设置 Qt 平台插件路径
+        qt_plugin_path = "/usr/lib/x86_64-linux-gnu/qt5/plugins"
+        if os.path.exists(qt_plugin_path):
+            os.environ.setdefault("QT_QPA_PLATFORM_PLUGIN_PATH", qt_plugin_path)
+        
+        # 设置 Qt WebEngine 进程路径
+        qt_webengine_process = "/usr/lib/x86_64-linux-gnu/qt5/libexec/QtWebEngineProcess"
+        if os.path.exists(qt_webengine_process):
+            os.environ.setdefault("QTWEBENGINEPROCESS_PATH", qt_webengine_process)
+        
+        # 设置 Qt WebEngine 资源路径
+        qt_resources = "/usr/share/qt5/resources"
+        if os.path.exists(qt_resources):
+            os.environ.setdefault("QTWEBENGINE_RESOURCES_PATH", qt_resources)
+        
+        # 设置 Qt WebEngine 语言包路径
+        qt_locales = "/usr/share/qt5/translations/qtwebengine_locales"
+        if os.path.exists(qt_locales):
+            os.environ.setdefault("QTWEBENGINE_LOCALES_PATH", qt_locales)
+        
+        # 设置 Qt 库数据路径（修复资源加载问题）
+        qt_library_data = "/usr/lib/x86_64-linux-gnu/qt5"
+        if os.path.exists(qt_library_data):
+            os.environ.setdefault("QTWEBENGINE_LIBRARY_DATA_PATH", qt_library_data)
+        
+        # 强制使用 xcb 平台插件（避免 wayland 问题）
+        os.environ.setdefault("QT_QPA_PLATFORM", "xcb")
+        
+        # 禁用 GTK 后端，强制使用 Qt
+        os.environ.setdefault("WEBVIEW_GUI", "qt")
+        
+        # 设置 Qt 数据目录（修复资源加载路径问题）
+        qt_data_dir = "/usr/lib/x86_64-linux-gnu/qt5"
+        if os.path.exists(qt_data_dir):
+            os.environ.setdefault("QT_DATA_DIR", qt_data_dir)
+        
+        # 设置 Qt 库路径
+        qt_lib_dir = "/usr/lib/x86_64-linux-gnu"
+        if os.path.exists(qt_lib_dir):
+            os.environ.setdefault("QT_LIB_DIR", qt_lib_dir)
+
+
 def main():
     log(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] 启动 port={PORT} "
         f"控制台={'无(日志→' + str(LOG_FILE) + ')' if LOG_FILE else '有'}")
@@ -151,6 +199,15 @@ def main():
         show_fatal("后端服务启动失败，请检查网络后重试。" +
                    (f"\n日志: {LOG_FILE}" if LOG_FILE else ""))
         return
+
+    # Linux 下配置 Qt WebEngine 环境
+    _setup_linux_qt_env()
+
+    # 强制启用 no-sandbox 标志（修复 Linux 下白屏/崩溃问题）
+    os.environ.setdefault("QTWEBENGINE_CHROMIUM_FLAGS", "--no-sandbox --disable-gpu --disable-software-rasterizer")
+    
+    # 强制使用 Qt 后端（避免 GTK 后端加载失败）
+    os.environ.setdefault("PYWEBVIEW_GUI", "qt")
 
     # 优先尝试原生桌面窗口 (NO_WEBVIEW=1 可强制浏览器模式, 用于诊断)
     if os.environ.get("NO_WEBVIEW") != "1":

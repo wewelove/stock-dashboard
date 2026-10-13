@@ -85,12 +85,56 @@ if [[ $PIP_FAIL -eq 1 ]]; then
     exit 1
 fi
 
-# 检查 webview 依赖 (Linux 下需要 GTK/WebKit)
+# 检查 webview 依赖 (Linux 下需要 Qt WebEngine)
 echo -e "${YELLOW}[检查] 检查 WebView 依赖...${NC}"
-if ! dpkg -l | grep -q "libwebkit2gtk-4.1-0\|libwebkit2gtk-4.0-37"; then
-    echo -e "${YELLOW}[提示] 可能需要安装 WebView2 依赖:${NC}"
-    echo "  sudo apt update && sudo apt install -y libwebkit2gtk-4.1-0"
-    echo "  (或 libwebkit2gtk-4.0-37，视 Ubuntu 版本而定)"
+if ! dpkg -l | grep -q "libqt5webenginecore5\|libqt5webenginewidgets5\|libqt5webengine5"; then
+    echo -e "${YELLOW}[提示] 可能需要安装 Qt WebEngine 依赖:${NC}"
+    echo "  sudo apt update && sudo apt install -y libqt5webenginecore5 libqt5webenginewidgets5 libqt5webengine5 qtwebengine5-dev"
+    echo "  (这些包提供 Qt WebEngine 运行时，pywebview 在 Linux 下需要它来渲染网页)"
+fi
+
+# 检查 pywebview 所需的系统依赖
+echo -e "${YELLOW}[检查] 检查 pywebview 系统依赖...${NC}"
+MISSING_DEPS=""
+
+# 检查 Qt 核心库
+if ! dpkg -l | grep -q "libqt5core5t64\|libqt5core5"; then
+    MISSING_DEPS="$MISSING_DEPS libqt5core5t64"
+fi
+
+# 检查 Qt GUI 库
+if ! dpkg -l | grep -q "libqt5gui5t64\|libqt5gui5"; then
+    MISSING_DEPS="$MISSING_DEPS libqt5gui5t64"
+fi
+
+# 检查 Qt Widgets 库
+if ! dpkg -l | grep -q "libqt5widgets5t64\|libqt5widgets5"; then
+    MISSING_DEPS="$MISSING_DEPS libqt5widgets5t64"
+fi
+
+# 检查 Qt Network 库
+if ! dpkg -l | grep -q "libqt5network5t64\|libqt5network5"; then
+    MISSING_DEPS="$MISSING_DEPS libqt5network5t64"
+fi
+
+# 检查 Qt WebEngine 库
+if ! dpkg -l | grep -q "libqt5webenginecore5"; then
+    MISSING_DEPS="$MISSING_DEPS libqt5webenginecore5"
+fi
+
+if ! dpkg -l | grep -q "libqt5webenginewidgets5"; then
+    MISSING_DEPS="$MISSING_DEPS libqt5webenginewidgets5"
+fi
+
+if ! dpkg -l | grep -q "libqt5webengine5"; then
+    MISSING_DEPS="$MISSING_DEPS libqt5webengine5"
+fi
+
+if [[ -n "$MISSING_DEPS" ]]; then
+    echo -e "${YELLOW}[提示] 建议安装以下 Qt 依赖以获得最佳桌面窗口体验:${NC}"
+    echo "  sudo apt update && sudo apt install -y $MISSING_DEPS"
+    echo ""
+    echo "  如果不安装这些依赖，应用仍可在浏览器模式下运行（当前默认行为）。"
 fi
 
 echo -e "${GREEN}[3/3] 启动 股票盯盘...${NC}"

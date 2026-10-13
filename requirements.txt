@@ -2,5 +2,8 @@ fastapi>=0.110
 uvicorn>=0.29
 requests>=2.31
 pywebview>=5.0
+# Linux 桌面窗口依赖 (pywebview)
+# Qt 后端: PyQt5 + PyQtWebEngine (需系统安装 libqt5core5t64 libqt5gui5t64 libqt5widgets5t64 libqt5network5t64 libqt5webenginecore5 libqt5webenginewidgets5 libqt5webengine5 qtwebengine5-dev)
+# 注意: Python 3.13 下 pygobject (GTK后端) 可能不兼容，推荐使用 Qt 后端
 # Windows 无系统 tzdata 数据库, 需由此包提供 (否则 ZoneInfo("Asia/Shanghai") 报错)
 tzdata>=2024.1
